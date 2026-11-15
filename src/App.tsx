@@ -1,9 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Users,
-  DollarSign,
   Utensils,
-  Share2,
   Plus,
   Trash2,
   RotateCcw,
@@ -19,92 +17,142 @@ import {
   Calculator
 } from 'lucide-react';
 
-// Datos iniciales basados en la juntada de la conversación
-const INITIAL_PARTICIPANTS = [
+// Estado inicial limpio (sin datos precargados)
+const createEmptyParticipants = () => [
   {
     id: '1',
-    name: 'May',
-    paid: 10000,
-    paidDesc: 'Cocas',
-    consumed: 7000,
-    consumedDesc: 'Choripán'
+    name: '',
+    paid: 0,
+    paidDesc: '',
+    consumed: 0,
+    consumedDesc: ''
   },
   {
     id: '2',
-    name: 'Nacho G',
-    paid: 6000,
-    paidDesc: 'Hielo',
-    consumed: 7000,
-    consumedDesc: 'Choripán'
+    name: '',
+    paid: 0,
+    paidDesc: '',
+    consumed: 0,
+    consumedDesc: ''
   },
   {
     id: '3',
-    name: 'Ara',
+    name: '',
     paid: 0,
     paidDesc: '',
+    consumed: 0,
+    consumedDesc: ''
+  }
+];
+
+// Ejemplo genérico para cargar cuando se toca el botón "Cargar ejemplo"
+const GENERIC_EXAMPLE_PARTICIPANTS = [
+  {
+    id: 'ex-1',
+    name: 'Sofía',
+    paid: 48000,
+    paidDesc: 'Pizzas y empanadas de todos',
     consumed: 11000,
-    consumedDesc: 'Bondiola'
+    consumedDesc: 'Pizza individual'
   },
   {
-    id: '4',
-    name: 'Guido',
+    id: 'ex-2',
+    name: 'Lucas',
+    paid: 12000,
+    paidDesc: 'Bebidas y hielo',
+    consumed: 9500,
+    consumedDesc: 'Empanadas'
+  },
+  {
+    id: 'ex-3',
+    name: 'Martín',
     paid: 0,
     paidDesc: '',
-    consumed: 11000,
-    consumedDesc: 'Bondiola'
+    consumed: 12500,
+    consumedDesc: 'Milanesa al plato'
   },
   {
-    id: '5',
-    name: 'Nacho A',
-    paid: 62000,
-    paidDesc: 'Comida de todos y papas',
-    consumed: 14000,
-    consumedDesc: 'Churrasquito'
+    id: 'ex-4',
+    name: 'Valentina',
+    paid: 8000,
+    paidDesc: 'Postre compartido',
+    consumed: 9000,
+    consumedDesc: 'Ensalada y bebida'
   }
 ];
 
 // Formateador de moneda estilo argentino ($12.600)
 const formatCurrency = (amount) => {
-  const rounded = Math.round(amount);
+  const rounded = Math.round(amount || 0);
   const isNegative = rounded < 0;
   const absVal = Math.abs(rounded).toLocaleString('es-AR');
   return `${isNegative ? '-' : ''}$${absVal}`;
 };
 
 export default function App() {
+  // Inyectar Tailwind CSS automáticamente para que se vea impecable en Vite / StackBlitz / Vercel
+  useEffect(() => {
+    if (!document.getElementById('tailwind-cdn-script')) {
+      const script = document.createElement('script');
+      script.id = 'tailwind-cdn-script';
+      script.src = 'https://cdn.tailwindcss.com';
+      document.head.appendChild(script);
+    }
+
+    if (!document.getElementById('vite-reset-styles')) {
+      const style = document.createElement('style');
+      style.id = 'vite-reset-styles';
+      style.innerHTML = `
+        html, body, #root {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: 100vh !important;
+          text-align: left !important;
+          background-color: #020617 !important;
+          color: #f1f5f9 !important;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   // 'detailed' = Consumo individual + compartidos | 'equal' = Todos consumimos lo mismo
   const [mode, setMode] = useState('detailed');
-  const [participants, setParticipants] = useState(INITIAL_PARTICIPANTS);
-  const [eventTitle, setEventTitle] = useState('Juntada / Comida');
+  const [participants, setParticipants] = useState(createEmptyParticipants);
+  const [eventTitle, setEventTitle] = useState('');
   const [copied, setCopied] = useState(false);
 
   // Estado para agregar nuevo participante rápido
   const [newName, setNewName] = useState('');
   const [newPaid, setNewPaid] = useState('');
-  const [newPaidDesc, setNewPaidDesc] = useState('');
   const [newConsumed, setNewConsumed] = useState('');
-  const [newConsumedDesc, setNewConsumedDesc] = useState('');
 
   // Funciones de gestión de participantes
   const handleAddParticipant = (e) => {
     e.preventDefault();
-    if (!newName.trim()) return;
+    const fallbackName = `Participante ${participants.length + 1}`;
 
     const newPerson = {
       id: Date.now().toString(),
-      name: newName.trim(),
+      name: newName.trim() || fallbackName,
       paid: parseFloat(newPaid) || 0,
-      paidDesc: newPaidDesc.trim(),
+      paidDesc: '',
       consumed: parseFloat(newConsumed) || 0,
-      consumedDesc: newConsumedDesc.trim()
+      consumedDesc: ''
     };
 
     setParticipants([...participants, newPerson]);
     setNewName('');
     setNewPaid('');
-    setNewPaidDesc('');
     setNewConsumed('');
-    setNewConsumedDesc('');
   };
 
   const handleUpdateParticipant = (id, field, value) => {
@@ -125,17 +173,15 @@ export default function App() {
   };
 
   const handleLoadExample = () => {
-    setParticipants(INITIAL_PARTICIPANTS);
+    setParticipants(GENERIC_EXAMPLE_PARTICIPANTS);
     setMode('detailed');
-    setEventTitle('Juntada (Choripanes, Bondiolas y Papas)');
+    setEventTitle('Cena con amigos');
   };
 
   const handleClearAll = () => {
-    setParticipants([
-      { id: '1', name: 'Persona 1', paid: 0, paidDesc: '', consumed: 0, consumedDesc: '' },
-      { id: '2', name: 'Persona 2', paid: 0, paidDesc: '', consumed: 0, consumedDesc: '' }
-    ]);
-    setEventTitle('Nueva Cuenta');
+    setParticipants(createEmptyParticipants());
+    setEventTitle('');
+    setCopied(false);
   };
 
   // Cálculos matemáticos y algoritmo de liquidación de deudas
@@ -165,21 +211,23 @@ export default function App() {
     const hasDeficitError = mode === 'detailed' && rawSharedPool < 0;
     const deficitAmount = hasDeficitError ? Math.abs(rawSharedPool) : 0;
 
-    // Si hay déficit (pusieron menos plata de lo que suman los platos), repartimos el desfase o calculamos igual para mostrar la alerta
-    const sharedPool = mode === 'equal' ? totalPaid : rawSharedPool;
+    // Si hay déficit, el pozo compartido no puede ser negativo para no distorsionar los platos
+    const sharedPool = mode === 'equal' ? totalPaid : Math.max(0, rawSharedPool);
     const sharedPerPerson = sharedPool / count;
 
     // Desglose por participante
-    const breakdown = participants.map((p) => {
+    const breakdown = participants.map((p, index) => {
+      const displayName = p.name.trim() || `Participante ${index + 1}`;
       const paid = Number(p.paid) || 0;
       const individual = mode === 'equal' ? 0 : Number(p.consumed) || 0;
       const finalCost = individual + sharedPerPerson;
-      // balance > 0: puso de más (deben recibir plata)
+      // balance > 0: puso de más (debe recibir plata)
       // balance < 0: puso de menos (debe pagar plata)
       const balance = paid - finalCost;
 
       return {
         ...p,
+        displayName,
         paid,
         individual,
         sharedQuota: sharedPerPerson,
@@ -191,12 +239,12 @@ export default function App() {
     // Algoritmo Greedy para simplificar transferencias
     const debtors = breakdown
       .filter((p) => p.balance < -0.5)
-      .map((p) => ({ id: p.id, name: p.name, amount: Math.abs(p.balance) }))
+      .map((p) => ({ id: p.id, name: p.displayName, amount: Math.abs(p.balance) }))
       .sort((a, b) => b.amount - a.amount);
 
     const creditors = breakdown
       .filter((p) => p.balance > 0.5)
-      .map((p) => ({ id: p.id, name: p.name, amount: p.balance }))
+      .map((p) => ({ id: p.id, name: p.displayName, amount: p.balance }))
       .sort((a, b) => b.amount - a.amount);
 
     const transfers = [];
@@ -210,8 +258,8 @@ export default function App() {
 
       if (amount > 0.5) {
         transfers.push({
-          from: debtor.name || 'Sin nombre',
-          to: creditor.name || 'Sin nombre',
+          from: debtor.name,
+          to: creditor.name,
           amount: Math.round(amount)
         });
       }
@@ -237,28 +285,32 @@ export default function App() {
 
   // Generar texto para copiar a WhatsApp
   const generateWhatsAppText = () => {
+    const title = eventTitle.trim() || 'Juntada';
     const lines = [];
-    lines.push(`🧾 *RESUMEN DE GASTOS: ${eventTitle.toUpperCase()}*`);
+    lines.push(`🧾 *RESUMEN DE GASTOS: ${title.toUpperCase()}*`);
     lines.push(`💰 *Gasto Total del Grupo:* ${formatCurrency(calculations.totalPaid)}`);
 
     if (mode === 'equal') {
-      lines.push(`⚖️ *Modalidad:* Todos consumimos lo mismo (${formatCurrency(calculations.sharedPerPerson)} c/u)`);
+      lines.push(
+        `⚖️ *Modalidad:* Todos consumimos lo mismo (${formatCurrency(calculations.sharedPerPerson)} c/u)`
+      );
     } else {
       lines.push(`🍽️ *Platos individuales:* ${formatCurrency(calculations.totalIndividualConsumed)}`);
-      lines.push(`🍟 *Pozo compartido (bebidas, papas, hielo, etc.):* ${formatCurrency(calculations.sharedPool)} (${formatCurrency(calculations.sharedPerPerson)} c/u)`);
+      lines.push(
+        `🍟 *Pozo compartido (bebidas, picada, hielo, etc.):* ${formatCurrency(calculations.sharedPool)} (${formatCurrency(calculations.sharedPerPerson)} c/u)`
+      );
     }
 
     lines.push('');
     lines.push('📊 *Detalle por persona:*');
     calculations.breakdown.forEach((p) => {
-      const name = p.name || 'Participante';
       if (mode === 'detailed') {
         lines.push(
-          `• *${name}:* Consumió ${formatCurrency(p.finalCost)} (${formatCurrency(p.individual)} indiv. + ${formatCurrency(p.sharedQuota)} comp.) | Puso ${formatCurrency(p.paid)}`
+          `• *${p.displayName}:* Consumió ${formatCurrency(p.finalCost)} (${formatCurrency(p.individual)} indiv. + ${formatCurrency(p.sharedQuota)} comp.) | Puso ${formatCurrency(p.paid)}`
         );
       } else {
         lines.push(
-          `• *${name}:* Le toca ${formatCurrency(p.finalCost)} | Puso ${formatCurrency(p.paid)}`
+          `• *${p.displayName}:* Le toca ${formatCurrency(p.finalCost)} | Puso ${formatCurrency(p.paid)}`
         );
       }
     });
@@ -284,19 +336,19 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16 selection:bg-emerald-500 selection:text-slate-950">
       {/* Header Principal */}
-      <header className="border-b border-slate-800 bg-slate-900/70 backdrop-blur-md sticky top-0 z-20">
+      <header className="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-950/50">
-              <Calculator className="w-6 h-6 text-white" />
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-950/60 shrink-0">
+              <Calculator className="w-6 h-6 text-slate-950" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight text-white">Dividir Gastos</h1>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium">
-                  Skill App
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">
+                  App
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -307,28 +359,30 @@ export default function App() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              type="button"
               onClick={handleLoadExample}
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition cursor-pointer"
-              title="Cargar el caso de May, Nacho G, Ara, Guido y Nacho A"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition cursor-pointer shadow-sm"
+              title="Cargar un ejemplo genérico de una juntada"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              Cargar ejemplo juntada
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              Cargar ejemplo
             </button>
             <button
+              type="button"
               onClick={handleClearAll}
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-rose-950/60 hover:text-rose-300 hover:border-rose-800 text-slate-300 border border-slate-800 transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3.5 py-2.5 rounded-xl bg-slate-800/90 hover:bg-rose-950/60 hover:text-rose-300 hover:border-rose-800 text-slate-300 border border-slate-700/80 transition cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Reiniciar cuenta
+              Limpiar todo
             </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 pt-6">
-        {/* Selector de Modo de División (Requerimiento clave de la skill) */}
+        {/* Selector de Modo de División */}
         <section className="mb-8">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
@@ -377,7 +431,7 @@ export default function App() {
                 </p>
               ) : (
                 <p>
-                  <strong className="text-white">Vía Rápida activa ("Todos consumimos lo mismo"):</strong> No hace falta anotar qué comió cada uno. Se suma todo lo que pusieron al pozo y se divide en partes exactamente iguales entre los {participants.length} integrantes.
+                  <strong className="text-white">Vía Rápida activa (&quot;Todos consumimos lo mismo&quot;):</strong> No hace falta anotar qué comió cada uno. Se suma todo lo que pusieron al pozo y se divide en partes exactamente iguales entre los {participants.length} integrantes.
                 </p>
               )}
             </div>
@@ -388,8 +442,7 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* COLUMNA IZQUIERDA: Carga de participantes y gastos (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
-            {/* Nombre de la juntada */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
                   <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
@@ -404,8 +457,8 @@ export default function App() {
                     type="text"
                     value={eventTitle}
                     onChange={(e) => setEventTitle(e.target.value)}
-                    placeholder="Nombre del evento..."
-                    className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    placeholder="Nombre de la juntada (opcional)..."
+                    className="w-full sm:w-56 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -421,7 +474,7 @@ export default function App() {
                       {/* Nombre */}
                       <div className={mode === 'detailed' ? 'sm:col-span-3' : 'sm:col-span-5'}>
                         <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                          Participante #{index + 1}
+                          Integrante #{index + 1}
                         </label>
                         <input
                           type="text"
@@ -429,8 +482,8 @@ export default function App() {
                           onChange={(e) =>
                             handleUpdateParticipant(person.id, 'name', e.target.value)
                           }
-                          placeholder="Nombre"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm font-medium text-white focus:outline-none focus:border-emerald-500"
+                          placeholder={`Participante ${index + 1}`}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm font-medium text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
                         />
                       </div>
 
@@ -453,7 +506,7 @@ export default function App() {
                                 handleUpdateParticipant(person.id, 'paid', e.target.value)
                               }
                               placeholder="0"
-                              className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-6 pr-2 py-2 text-sm font-semibold text-emerald-300 focus:outline-none focus:border-emerald-500"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-6 pr-2 py-2 text-sm font-semibold text-emerald-300 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
                             />
                           </div>
                           <input
@@ -462,7 +515,7 @@ export default function App() {
                             onChange={(e) =>
                               handleUpdateParticipant(person.id, 'paidDesc', e.target.value)
                             }
-                            placeholder="Ej. Cocas, Hielo"
+                            placeholder="Detalle (opcional)"
                             className="w-28 bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
                           />
                         </div>
@@ -488,7 +541,7 @@ export default function App() {
                                   handleUpdateParticipant(person.id, 'consumed', e.target.value)
                                 }
                                 placeholder="0"
-                                className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-6 pr-2 py-2 text-sm font-semibold text-amber-300 focus:outline-none focus:border-amber-500"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-6 pr-2 py-2 text-sm font-semibold text-amber-300 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
                               />
                             </div>
                             <input
@@ -497,7 +550,7 @@ export default function App() {
                               onChange={(e) =>
                                 handleUpdateParticipant(person.id, 'consumedDesc', e.target.value)
                               }
-                              placeholder="Ej. Choripán"
+                              placeholder="Plato (opcional)"
                               className="w-28 bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
                             />
                           </div>
@@ -528,7 +581,7 @@ export default function App() {
               >
                 <p className="text-xs font-medium text-slate-400 mb-2.5 flex items-center gap-1.5">
                   <Plus className="w-3.5 h-3.5 text-emerald-400" />
-                  Agregar otro amigo a la cuenta
+                  Sumar otra persona a la cuenta
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                   <div className={mode === 'detailed' ? 'sm:col-span-3' : 'sm:col-span-5'}>
@@ -536,7 +589,7 @@ export default function App() {
                       type="text"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      placeholder="Nombre (ej. Sofi)"
+                      placeholder="Nombre (ej. Franco)"
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -567,10 +620,10 @@ export default function App() {
                   <div className="sm:col-span-3">
                     <button
                       type="submit"
-                      className="w-full h-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm py-2 px-4 rounded-lg transition cursor-pointer"
+                      className="w-full h-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm py-2 px-4 rounded-lg transition cursor-pointer shadow-md"
                     >
                       <Plus className="w-4 h-4" />
-                      Sumar
+                      Agregar
                     </button>
                   </div>
                 </div>
@@ -588,8 +641,8 @@ export default function App() {
                   <p>
                     Los consumos individuales suman{' '}
                     <strong>{formatCurrency(calculations.totalIndividualConsumed)}</strong>, pero el
-                    total pagado cargado es de{' '}
-                    <strong>{formatCurrency(calculations.totalPaid)}</strong>. Faltan asignar{' '}
+                    total pagado cargado hasta ahora es de{' '}
+                    <strong>{formatCurrency(calculations.totalPaid)}</strong>. Faltan cargar{' '}
                     <strong>{formatCurrency(calculations.deficitAmount)}</strong> en la columna
                     &quot;¿Cuánto pagó / puso?&quot;.
                   </p>
@@ -598,7 +651,7 @@ export default function App() {
             )}
 
             {/* Desglose Matemático Detallado por Persona */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -632,7 +685,7 @@ export default function App() {
                       return (
                         <tr key={item.id} className="hover:bg-slate-800/30">
                           <td className="py-3 pr-2 font-medium text-white">
-                            <div>{item.name || 'Sin nombre'}</div>
+                            <div>{item.displayName}</div>
                             {(item.paidDesc || item.consumedDesc) && (
                               <div className="text-[11px] text-slate-400 font-normal">
                                 {[item.consumedDesc, item.paidDesc ? `Pagó: ${item.paidDesc}` : '']
@@ -684,7 +737,7 @@ export default function App() {
           {/* COLUMNA DERECHA: Resumen General y Transferencias (5 cols) */}
           <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
             {/* Tarjetas de Resumen del Pozo */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-lg">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
                   3. Resumen de la cuenta
@@ -730,7 +783,7 @@ export default function App() {
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-slate-400 block">Pozo compartido (papas, bebida, hielo):</span>
+                    <span className="text-slate-400 block">Pozo compartido (bebidas, extras):</span>
                     <span className="font-semibold text-emerald-300">
                       {formatCurrency(calculations.sharedPool)}
                     </span>
@@ -755,7 +808,25 @@ export default function App() {
                 </div>
               </div>
 
-              {calculations.transfers.length === 0 ? (
+              {calculations.totalPaid === 0 && calculations.totalIndividualConsumed === 0 ? (
+                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-6 text-center">
+                  <Calculator className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-200">
+                    Cargá los montos para calcular
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Anotá cuánto pagó cada uno o tocá{' '}
+                    <button
+                      type="button"
+                      onClick={handleLoadExample}
+                      className="text-emerald-400 underline hover:text-emerald-300 cursor-pointer font-medium"
+                    >
+                      Cargar ejemplo
+                    </button>{' '}
+                    arriba para ver una demostración.
+                  </p>
+                </div>
+              ) : calculations.transfers.length === 0 ? (
                 <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-6 text-center">
                   <Check className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
                   <p className="text-sm font-semibold text-white">¡Cuentas saldadas!</p>
@@ -798,7 +869,8 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleCopyWhatsApp}
-                  className={`w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition shadow-lg cursor-pointer ${
+                  disabled={calculations.totalPaid === 0}
+                  className={`w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition shadow-lg cursor-pointer disabled:opacity-40 disabled:pointer-events-none ${
                     copied
                       ? 'bg-emerald-400 text-slate-950'
                       : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
